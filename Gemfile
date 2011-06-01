@@ -1,5 +1,8 @@
 source :rubygems
-gemspec
+
+gem "rack"
+gem "sinatra"
+gem "ripple"
 
 group :development do
   gem "rake"
@@ -13,4 +16,5 @@ group :test do
   gem "rack-test"
   gem "shoulda"
   gem "timecop"
+  gem "test-unit"
 end

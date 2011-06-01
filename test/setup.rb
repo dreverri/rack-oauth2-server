@@ -12,11 +12,12 @@ $: << File.expand_path(File.dirname(__FILE__) + "/..")
 require "rack/oauth2/server"
 require "rack/oauth2/server/admin"
 
-
 ENV["RACK_ENV"] = "test"
-DATABASE = Mongo::Connection.new["test"]
 FRAMEWORK = ENV["FRAMEWORK"] || "sinatra"
 
+require "ripple"
+Ripple.load_config(File.dirname(__FILE__) + '/../config/ripple.yml', ["test"])
+require "test/support/riak_test_server"
 
 $logger = Logger.new("test.log")
 $logger.level = Logger::DEBUG
@@ -35,7 +36,7 @@ when "sinatra", nil
   require "sinatra/base"
   puts "Testing with Sinatra #{Sinatra::VERSION}"
   require File.dirname(__FILE__) + "/sinatra/my_app"
-  
+
   class Test::Unit::TestCase
     def app
       Rack::Builder.new do
@@ -63,7 +64,7 @@ when "rails"
     require "rack/oauth2/server/railtie"
     require File.dirname(__FILE__) + "/rails3/config/environment"
     puts "Testing with Rails #{Rails.version}"
-  
+
     class Test::Unit::TestCase
       def app
         ::Rails.application
@@ -81,7 +82,7 @@ when "rails"
     require "action_controller"
     require File.dirname(__FILE__) + "/rails2/config/environment"
     puts "Testing with Rails #{Rails.version}"
-  
+
     class Test::Unit::TestCase
       def app
         ActionController::Dispatcher.new
@@ -104,17 +105,15 @@ class Test::Unit::TestCase
   include Rack::OAuth2
 
   def setup
-    Server.database = DATABASE
     Server::Admin.scope = %{read write}
-    @client = Server.register(:display_name=>"UberClient", :redirect_uri=>"http://uberclient.dot/callback", :scope=>%w{read write oauth-admin})
+    @client = Server.register(:display_name=>"UberClient",
+                              :redirect_uri=>"http://uberclient.dot/callback",
+                              :scope=>%w{read write oauth-admin})
   end
 
   attr_reader :client, :end_user
 
   def teardown
-    Server::Client.collection.drop
-    Server::AuthRequest.collection.drop
-    Server::AccessGrant.collection.drop
-    Server::AccessToken.collection.drop
+    Ripple::TestServer.clear
   end
 end
