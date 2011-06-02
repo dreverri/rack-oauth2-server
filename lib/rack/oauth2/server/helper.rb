@@ -69,7 +69,7 @@ module Rack
           @response["oauth.no_access"] = "true"
           @response.status = 401
         end
-        
+
         # Rejects the request and returns 403 (Forbidden). You can just
         # return 403, but this also sets the WWW-Authenticate header the right
         # value. Indicates which scope the client needs to make this request.

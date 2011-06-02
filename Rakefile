@@ -77,7 +77,7 @@ namespace :test do
 end
 task :default=>"test:all"
 
-begin 
+begin
   require "yard"
   YARD::Rake::YardocTask.new do |doc|
     doc.files = FileList["lib/**/*.rb"]

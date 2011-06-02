@@ -169,8 +169,6 @@ module Rack
         return @app.call(env) if options.path && request.path.index(options.path) != 0
 
         begin
-          # Use options.database if specified.
-          org_database, Server.database = Server.database, options.database || Server.database
           logger = options.logger || env["rack.logger"]
 
           # 3.  Obtaining End-User Authorization
@@ -234,8 +232,6 @@ module Rack
               return response
             end
           end
-        ensure
-          Server.database = org_database
         end
       end
 
@@ -251,7 +247,7 @@ module Rack
 
           if request.GET["authorization"]
             auth_request = self.class.get_auth_request(request.GET["authorization"]) rescue nil
-            if !auth_request || auth_request.revoked
+            if !auth_request || auth_request.revoked?
               logger.error "RO2S: Invalid authorization request #{auth_request}" if logger
               return bad_request("Invalid authorization request")
             end
@@ -382,7 +378,7 @@ module Rack
         rescue OAuthError=>error
           logger.error "RO2S: Access token request error #{error.code}: #{error.message}" if logger
           return unauthorized(request, error) if InvalidClientError === error && request.basic?
-          return [400, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" }, 
+          return [400, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" },
                   [{ :error=>error.code, :error_description=>error.message }.to_json]]
         end
       end
@@ -405,8 +401,6 @@ module Rack
         end
         raise InvalidClientError if client.revoked
         return client
-      rescue BSON::InvalidObjectId
-        raise InvalidClientError
       end
 
       # Rack redirect response.

@@ -19,18 +19,18 @@ class AccessTokenTest < Test::Unit::TestCase
         assert_equal 401, last_response.status
       end
       should "respond with authentication method OAuth" do
-        assert_equal "OAuth", last_response["WWW-Authenticate"].split.first
+        assert_equal "OAuth", last_response.headers["WWW-Authenticate"].split.first
       end
       should "respond with realm" do
-        assert_match " realm=\"example.org\"", last_response["WWW-Authenticate"] 
+        assert_match " realm=\"example.org\"", last_response.headers["WWW-Authenticate"]
       end
       if error
         should "respond with error code #{error}" do
-          assert_match " error=\"#{error}\"", last_response["WWW-Authenticate"]
+          assert_match " error=\"#{error}\"", last_response.headers["WWW-Authenticate"]
         end
       else
         should "not respond with error code" do
-          assert !last_response["WWW-Authenticate"]["error="]
+          assert !last_response.headers["WWW-Authenticate"]["error="]
         end
       end
     end
@@ -45,10 +45,10 @@ class AccessTokenTest < Test::Unit::TestCase
     params = { :redirect_uri=>client.redirect_uri, :client_id=>client.id, :client_secret=>client.secret, :response_type=>"code",
                :scope=>"read write", :state=>"bring this back" }
     get "/oauth/authorize?" + Rack::Utils.build_query(params)
-    get last_response["Location"] if last_response.status == 303
+    get last_response.headers["Location"] if last_response.status == 303
     authorization = last_response.body[/authorization:\s*(\S+)/, 1]
     post "/oauth/grant", :authorization=>authorization
-    code = Rack::Utils.parse_query(URI.parse(last_response["Location"]).query)["code"]
+    code = Rack::Utils.parse_query(URI.parse(last_response.headers["Location"]).query)["code"]
     # Get access token
     basic_authorize client.id, client.secret
     post "/oauth/access_token", :scope=>"read write", :grant_type=>"authorization_code", :code=>code, :redirect_uri=>client.redirect_uri
@@ -121,7 +121,7 @@ class AccessTokenTest < Test::Unit::TestCase
     end
 
     # 5.1.2.  URI Query Parameter
-    
+
     context "query parameter" do
       context "default mode" do
         setup { get "/private?oauth_token=#{@token}" }
@@ -142,14 +142,14 @@ class AccessTokenTest < Test::Unit::TestCase
           setup { get "/private?oauth_token=dingdong" }
           should_fail_authentication :invalid_token
         end
-        
+
         teardown do
           config.param_authentication = false
         end
       end
     end
   end
-  
+
   context "POST" do
     context "no authorization" do
       setup { post "/change" }
@@ -217,16 +217,16 @@ class AccessTokenTest < Test::Unit::TestCase
         assert_equal 403, last_response.status
       end
       should "respond with authentication method OAuth" do
-        assert_equal "OAuth", last_response["WWW-Authenticate"].split.first
+        assert_equal "OAuth", last_response.headers["WWW-Authenticate"].split.first
       end
       should "respond with realm" do
-        assert_match " realm=\"example.org\"", last_response["WWW-Authenticate"] 
+        assert_match " realm=\"example.org\"", last_response.headers["WWW-Authenticate"]
       end
       should "respond with error code insufficient_scope" do
-        assert_match " error=\"insufficient_scope\"", last_response["WWW-Authenticate"]
+        assert_match " error=\"insufficient_scope\"", last_response.headers["WWW-Authenticate"]
       end
       should "respond with scope name" do
-        assert_match " scope=\"math\"", last_response["WWW-Authenticate"]
+        assert_match " scope=\"math\"", last_response.headers["WWW-Authenticate"]
       end
     end
   end

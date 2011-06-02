@@ -1,24 +1,40 @@
 module Rack
   module OAuth2
     class Server
-
       # Access token. This is what clients use to access resources.
       #
       # An access token is a unique code, associated with a client, an identity
       # and scope. It may be revoked, or expire after a certain period.
       class AccessToken
         include Ripple::Document
+        timestamps!
+
         property :code, String
-        property :scope, String
+        property :scope, Array
         property :identity, String
         property :last_access, Integer
         property :prev_access, Integer
         property :revoked, Integer
+        property :expires_at, Integer
+        key_on :code
 
         one :client, :class_name => 'Rack::OAuth2::Server::Client'
 
+        def token
+          self.code
+        end
+
+        def client_id
+          self.client.id
+        end
+
+        def scope=(value)
+          self[:scope] = Utils.normalize_scope(value)
+        end
+
         # Creates a new AccessToken for the given client and scope.
         def self.create_token_for(client, scope)
+          # TODO: this seems like an unneccessary method
           create(:code => Server.secure_random,
                  :scope => scope,
                  :client => client)
@@ -26,23 +42,19 @@ module Rack
 
         # Find AccessToken from token. Does not return revoked tokens.
         def self.from_token(token)
-          if access = find(token) and !access.revoked
+          if access = find(token) and !access.revoked and !access.client.revoked
             return access
           end
         end
 
         # Get an access token (create new one if necessary).
         def self.get_token_for(identity, client, scope)
-          if identity = Identity.find(identity)
-            token = identity.access_tokens.find do |access_token|
-              access_token.client.key == client.key and access_token.scope == scope
-            end
+          unless ident = Identity.find(identity)
+            ident = Identity.new
+            ident.key = identity
           end
 
-          token ||= create(:code => Server.secure_random,
-                           :scope => scope,
-                           :client => client,
-                           :identity => identity)
+          ident.get_token_for(client, scope)
         end
 
         # Find all AccessTokens for an identity.

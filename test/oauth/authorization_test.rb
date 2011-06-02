@@ -114,7 +114,7 @@ class AuthorizationTest < Test::Unit::TestCase
 
 
   # 3.1.  Authorization Response
-  
+
   context "expecting authorization code" do
     setup do
       @params[:response_type] = "code"
@@ -289,7 +289,7 @@ class AuthorizationTest < Test::Unit::TestCase
 
   context "unregistered redirect URI" do
     setup do
-      Rack::OAuth2::Server::Client.collection.update({ :_id=>client._id }, { :$set=>{ :redirect_uri=>nil } })
+      client.update :redirect_uri=>nil
       request_authorization :redirect_uri=>"http://uberclient.dot/oz"
     end
     should_ask_user_for_authorization

@@ -3,18 +3,26 @@ module Rack
     class Server
       class AccessGrant
         include Ripple::Document
+        timestamps!
 
         property :code, String
         property :identity, String
-        property :scope, String
-        property :redirect_url, String
-        property :created_at, Integer
+        property :scope, Array
+        property :redirect_uri, String
         property :expires_at, Integer
         property :revoked, Integer
-        property :access_token, String
         key_on :code
 
         one :client, :class_name => 'Rack::OAuth2::Server::Client'
+        one :access_token, :class_name => 'Rack::OAuth2::Server::AccessToken'
+
+        def scope=(value)
+          self[:scope] = Utils.normalize_scope(value)
+        end
+
+        def client_id
+          self.client.id
+        end
 
         # Find AccessGrant from authentication code.
         def self.from_code(code)
@@ -25,15 +33,14 @@ module Rack
 
         # Create a new access grant.
         def self.create(identity, client, scope, redirect_uri = nil, expires = nil)
-          created_at = Time.now.to_i
-
-          super(:code => Server.secure_random,
-                :identity => identity,
-                :scope => scope,
-                :redirect_uri => client.redirect_uri || redirect_uri,
-                :created_at => created_at,
-                :expires_at => created_at + (expires || 300),
-                :client => client)
+          grant = new(:code => Server.secure_random,
+                      :identity => identity,
+                      :scope => scope,
+                      :redirect_uri => client.redirect_uri || redirect_uri,
+                      :expires_at => Time.now.to_i + (expires || 300),
+                      :client => client)
+          grant.save
+          grant
         end
 
 
@@ -44,7 +51,7 @@ module Rack
         # successful in returning access token, futher requests raise
         # InvalidGrantError.
         def authorize!
-          if self.access_token || self.revoked
+          if !!self.access_token || !!self.revoked
             raise InvalidGrantError, "You can't use the same access grant twice"
           end
 
