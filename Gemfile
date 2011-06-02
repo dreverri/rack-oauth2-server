@@ -1,8 +1,5 @@
 source :rubygems
-
-gem "rack"
-gem "sinatra"
-gem "ripple"
+gemspec
 
 group :development do
   gem "rake"
